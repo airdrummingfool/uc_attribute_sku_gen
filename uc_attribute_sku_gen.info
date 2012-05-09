@@ -1,0 +1,6 @@
+
+name = Ubercart Attribute SKU Generator
+description = Generates SKUs based on the adjustment options for products
+package = Ubercart - Extra
+dependencies[] = uc_attribute
+core = 6.x

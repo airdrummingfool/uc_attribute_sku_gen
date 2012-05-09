@@ -1,0 +1,32 @@
+<?php
+
+function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'uc_product_adjustments_form') {
+    // print("<pre>Begin form alter stuff\n");
+    // print_r($form_state);
+
+    // get the default sku as the base
+    $default_sku = $form['default']['#value'];
+
+    foreach ($form['table']['body'] as &$combo) {
+      if (is_array($combo) && isset($combo['combo_array'])) {
+        // print_r($combo);
+        // print_r($combo['combo_array']['value']);
+
+        $serialized = $combo['combo_array']['#value'];
+        $unserialized = unserialize($serialized);
+        // print_r($unserialized);
+
+        $sku = $combo['model']['#default_value'];
+        
+        if ($sku == $default_sku) {
+          $combo['model']['#default_value'] .= '-';
+          foreach ($unserialized as $aid => $oid) {
+            $option = preg_replace("/[^A-Za-z0-9]/",'', $form['#parameters'][2]->attributes[$aid]->options[$oid]->name);
+            $combo['model']['#default_value'] .= $option;
+          }
+        }
+      }
+    }
+  }
+}
