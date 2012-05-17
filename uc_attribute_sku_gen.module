@@ -23,25 +23,47 @@ function uc_attribute_sku_gen_action_info() {
  */
 function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
   print("<pre>");
+  print_r(uc_product_types());
   print_r($node);
   print("</pre>");
   
   $error = FALSE;
-  // check if product with attributes, if not, error out
-  
-  // get base sku
-  
-  // do some magical generating in new array(?)
+  // make sure it's a product with attributes
+  if (uc_product_is_product($node) && count($node->attributes) > 0) {
+    // get base sku
+    $base_sku = $node->model;
+    
+    // load all option combinations (adjustments) from DB
+    $adjustments = db_query("SELECT nid, combination, model FROM {uc_product_adjustments} WHERE nid = %d", $node->nid);
+
+    // update each adjustment with a generated model
+    // do we only want to do this if it's not equal to the base model?
+    while ($adjustment = db_fetch_object($adjustments)) {
+      print("<pre>");
+      print_r($adjustment);
+      print("</pre>");
+      // $available = array();
+      // $combo = unserialize($data->combination);
+      // if ($data->stock || !$data->active) { // Stock is available or stock tracking is NOT active
+      //  $available = array_merge($available, array_values($combo)); // Merge value into array
+      //}
+    }
+    
+    // do some magical generating in new array(?)
+  }
+  else {
+    $error = TRUE;
+  }
 
   if (!$error) {
     print("saving!");
     // Save modified product.
-    node_save($node);
+    // node_save($node);
     // Load modified node to check if operation was processed correctly.
-    $new_node = node_load($node->nid, NULL, TRUE);
+    // $new_node = node_load($node->nid, NULL, TRUE);
   }
   if ($error /* || $new_node->attributes != $attributes */) {
-    drupal_set_message(ucfirst($action) . t(' (@new_value): %node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title, '@new_value' => $new_value)), 'warning');
+    drupal_set_message(t('%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title)), 'warning');
     watchdog('Ubercart attribute sku generator', '%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title), WATCHDOG_WARNING, l(t('edit'), 'node/' . $node->nid . '/edit'));
   }
 }
