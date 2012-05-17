@@ -114,6 +114,9 @@ function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
         
         if ($sku == $default_sku) {
           $combo['model']['#default_value'] .= _uc_attribute_sku_gen_gen_adjustment_sku($unserialized,$form['#parameters'][2]->attributes);
+
+          // If we changed it, mark it on the form
+          $combo['model']['#suffix'] = '*';
         }
       }
     }
