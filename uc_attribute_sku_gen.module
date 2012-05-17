@@ -45,14 +45,9 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
       print("</pre>");
       // unserialize and generate new sku
       $combo = unserialize($adjustment->combination);
-      print("<pre>");
-      print_r($combo);
-      print("</pre>");
+
+      $adjustment_sku .= _uc_attribute_sku_gen_gen_adjustment_sku($combo, $node->attributes);
       
-      foreach ($combo as $aid => $oid) {
-        $option = preg_replace("/[^A-Za-z0-9]/",'', $node->attributes[$aid]->options[$oid]->name);
-        $adjustment_sku .= '-' . $option;
-      }
       print('new SKU: ' . $adjustment_sku . '<br>');
       
       // put new sku into db
@@ -99,13 +94,23 @@ function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
         $sku = $combo['model']['#default_value'];
         
         if ($sku == $default_sku) {
-          // $combo['model']['#default_value'] .= '-';
-          foreach ($unserialized as $aid => $oid) {
-            $option = preg_replace("/[^A-Za-z0-9]/",'', $form['#parameters'][2]->attributes[$aid]->options[$oid]->name);
-            $combo['model']['#default_value'] .= '-' . $option;
-          }
+          $combo['model']['#default_value'] .= _uc_attribute_sku_gen_gen_adjustment_sku($unserialized,$form['#parameters'][2]->attributes);
         }
       }
     }
   }
+}
+
+function _uc_attribute_sku_gen_gen_adjustment_sku($combo, $attrib_opt_array) {
+  print("<pre>");
+  print_r($combo);
+  print_r($attrib_opt_array);
+  print("</pre>");
+
+  $sku_adjustment = '';
+  foreach ($combo as $aid => $oid) {
+    $option = preg_replace("/[^A-Za-z0-9]/",'', $attrib_opt_array[$aid]->options[$oid]->name);
+    $sku_adjustment .= '-' . $option;
+  }
+  return $sku_adjustment;
 }
