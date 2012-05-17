@@ -24,6 +24,9 @@ function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
           foreach ($unserialized as $aid => $oid) {
             $option = preg_replace("/[^A-Za-z0-9]/",'', $form['#parameters'][2]->attributes[$aid]->options[$oid]->name);
             $combo['model']['#default_value'] .= '-' . $option;
+
+            // If we changed it, mark it on the form
+            $combo['model']['#suffix'] = '*';
           }
         }
       }
