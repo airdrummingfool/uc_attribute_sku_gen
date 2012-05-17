@@ -32,27 +32,46 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
     // get base sku
     $base_sku = $node->model;
     
-    // load all option combinations (adjustments) from DB
-    $adjustments = db_query("SELECT nid, combination, model FROM {uc_product_adjustments} WHERE nid = %d", $node->nid);
+    // load all current option combinations (adjustments) from DB
+    // $adjustments = db_query("SELECT nid, combination, model FROM {uc_product_adjustments} WHERE nid = %d", $node->nid);
 
-    // update each adjustment with a generated model
-    // do we only want to do this if it's not equal to the base model?
-    while ($adjustment = db_fetch_object($adjustments)) {
+    // generate array of [aid]=>[oid] so we can do a cartesian product
+    // initially, put default_ordering as main key so we can sort
+    // use default_ordering so order is consistent across all products
+    $aid_oid_unsorted = array();
+    foreach ($node->attributes as $aid => $attribute) {
+      foreach ($attribute->options as $oid => $option) {
+        $aid_oid_unsorted[$attribute->default_ordering][$aid][] = $oid;
+      }
+    }
+
+    // sort by default_ordering
+    ksort($aid_oid_unsorted);
+
+    // remove default_ordering keys now that it's sorted
+    $aid_oid_sorted = array();
+    foreach($aid_oid_unsorted as $aid_oid) {
+      foreach($aid_oid as $aid => $oid) {
+        $aid_oid_sorted[$aid] = $oid;
+      }
+    }
+
+    $combos = _uc_attribute_sku_gen_array_cartesian($aid_oid_sorted);
+
+    // for each combo, create a unique sku
+    foreach ($combos as $combo) {
       $error = FALSE;
       $adjustment_sku = $base_sku;
-      print("<pre>");
-      print_r($adjustment);
-      print("</pre>");
-      // unserialize and generate new sku
-      $combo = unserialize($adjustment->combination);
 
+      // get sku adjustment
       $adjustment_sku .= _uc_attribute_sku_gen_gen_adjustment_sku($combo, $node->attributes);
-      
       print('new SKU: ' . $adjustment_sku . '<br>');
-      
-      // put new sku into db
+
+      // erase previous sku if it exists
+
+      // add new sku into db
       print("saving!<br>");
-      print("query: UPDATE {uc_product_adjustments} SET model = %s WHERE nid = %d\", $adjustment_sku, $node->nid<br>");
+      print("query: INSERT INTO {uc_product_adjustments} (nid, combo, model) VALUES (%d, %s, %s)\", $node->nid, serialize($combo), $adjustment_sku<br>");
       // db_query("UPDATE {uc_product_adjustments} SET model = %s WHERE nid = %d", $adjustment_sku, $node->nid);
       
       // Load modified node to check if operation was processed correctly.
@@ -113,4 +132,34 @@ function _uc_attribute_sku_gen_gen_adjustment_sku($combo, $attrib_opt_array) {
     $sku_adjustment .= '-' . $option;
   }
   return $sku_adjustment;
+}
+
+/*
+ * Generate all possible combinations of current attribute/options enabled
+ * Source: http://stackoverflow.com/a/8936492/627772
+ * Note: should be rewritten for drupal?
+ */
+function _uc_attribute_sku_gen_array_cartesian($arrays) {
+  $result = array();
+  $keys = array_keys($arrays);
+  $reverse_keys = array_reverse($keys);
+  $size = intval(count($arrays) > 0);
+  foreach ($arrays as $array) {
+    $size *= count($array);
+  }
+  for ($i = 0; $i < $size; $i ++) {
+    $result[$i] = array();
+    foreach ($keys as $j) {
+      $result[$i][$j] = current($arrays[$j]);
+    }
+    foreach ($reverse_keys as $j) {
+      if (next($arrays[$j])) {
+        break;
+      }
+      elseif (isset ($arrays[$j])) {
+        reset($arrays[$j]);
+      }
+    }
+  }
+  return $result;
 }
