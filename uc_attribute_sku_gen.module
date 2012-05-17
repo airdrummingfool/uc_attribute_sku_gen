@@ -20,10 +20,10 @@ function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
         $sku = $combo['model']['#default_value'];
         
         if ($sku == $default_sku) {
-          $combo['model']['#default_value'] .= '-';
+          // $combo['model']['#default_value'] .= '-';
           foreach ($unserialized as $aid => $oid) {
             $option = preg_replace("/[^A-Za-z0-9]/",'', $form['#parameters'][2]->attributes[$aid]->options[$oid]->name);
-            $combo['model']['#default_value'] .= $option;
+            $combo['model']['#default_value'] .= '-' . $option;
           }
         }
       }
