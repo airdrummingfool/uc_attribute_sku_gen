@@ -22,18 +22,10 @@ function uc_attribute_sku_gen_action_info() {
  * Execute the action.
  */
 function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
-  print("<pre>");
-  print_r(uc_product_types());
-  print_r($node);
-  print("</pre>");
-
   // make sure it's a product with attributes
   if (uc_product_is_product($node) && count($node->attributes) > 0) {
     // get base sku
     $base_sku = $node->model;
-    
-    // load all current option combinations (adjustments) from DB
-    // $adjustments = db_query("SELECT nid, combination, model FROM {uc_product_adjustments} WHERE nid = %d", $node->nid);
 
     // generate array of [aid]=>[oid] so we can do a cartesian product
     // initially, put default_ordering as main key so we can sort
@@ -66,37 +58,29 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
 
       // get sku adjustment
       $adjustment_sku .= _uc_attribute_sku_gen_gen_adjustment_sku($combo, $node->attributes);
-      print('new SKU: ' . $adjustment_sku . '<br>');
 
       // create conditions for updating/inserting
       $conditions = array();
       $conditions[] = $adjustment_sku;
       $conditions[] = $node->nid;
       $conditions[] = serialize($combo);
-      print('conditions: <pre>');
-      print_r($conditions);
-      print("</pre><BR>");
+
       // try and update first
       $result = db_query("UPDATE {uc_product_adjustments} SET model = '%s' WHERE nid = %d AND combination = '%s'", $conditions);
       if (!db_affected_rows()) {
         // if it doesn't exist, insert
-        print('combo did not exist in db!<br>');
         $result = db_query("INSERT INTO {uc_product_adjustments} (model, nid, combination) VALUES ('%s', %d, '%s')",
           $conditions);
       }
-      // $result = db_query("DELETE FROM {uc_product_adjustments} WHERE combination = '%s' AND nid = %d", $conditions);
-      print($result);
-      print(db_fetch_object($result));
+      // print($result);
 
-      // add new sku into db
-      print("done<br>");
       // Load modified node to check if operation was processed correctly.
-      // $new_node = node_load($node->nid, NULL, TRUE);
-      
-    //  if($new_adjustment_sku != $adjustment_sku) {
-    //    drupal_set_message(t('%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title)), 'warning');
-    //    watchdog('Ubercart attribute sku generator', '%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title), WATCHDOG_WARNING, l(t('edit'), 'node/' . $node->nid . '/edit'));
-    //  }
+      $new_sku_db = db_fetch_object(db_query("SELECT model FROM {uc_product_adjustments} WHERE nid = %d AND combination = '%s'", $node->nid, serialize($combo)));
+
+      if($new_sku_db->model != $adjustment_sku) {
+        drupal_set_message(t('An option combination of %node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title)), 'warning');
+        watchdog('Ubercart attribute sku generator', 'An option combination of %node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title), WATCHDOG_WARNING, l(t('edit'), 'node/' . $node->nid . '/edit'));
+      }
     }
 
   }
@@ -140,11 +124,6 @@ function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
 }
 
 function _uc_attribute_sku_gen_gen_adjustment_sku($combo, $attrib_opt_array) {
-  print("<pre>");
-  print_r($combo);
-  print_r($attrib_opt_array);
-  print("</pre>");
-
   $sku_adjustment = '';
   foreach ($combo as $aid => $oid) {
     $option = preg_replace("/[^A-Za-z0-9]/",'', $attrib_opt_array[$aid]->options[$oid]->name);
