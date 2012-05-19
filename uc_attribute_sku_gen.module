@@ -41,7 +41,7 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
     $aid_oid_unsorted = array();
     foreach ($node->attributes as $aid => $attribute) {
       foreach ($attribute->options as $oid => $option) {
-        $aid_oid_unsorted[$attribute->default_ordering][$aid][] = $oid;
+        $aid_oid_unsorted[$attribute->default_ordering][$aid][] = "$oid"; // force oid to be string (necessary for db actions)
       }
     }
 
@@ -56,6 +56,7 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
       }
     }
 
+    // generate all combinations of the enabled options
     $combos = _uc_attribute_sku_gen_array_cartesian($aid_oid_sorted);
 
     // for each combo, create a unique sku
@@ -67,13 +68,28 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
       $adjustment_sku .= _uc_attribute_sku_gen_gen_adjustment_sku($combo, $node->attributes);
       print('new SKU: ' . $adjustment_sku . '<br>');
 
-      // erase previous sku if it exists
+      // create conditions for updating/inserting
+      $conditions = array();
+      $conditions[] = $adjustment_sku;
+      $conditions[] = $node->nid;
+      $conditions[] = serialize($combo);
+      print('conditions: <pre>');
+      print_r($conditions);
+      print("</pre><BR>");
+      // try and update first
+      $result = db_query("UPDATE {uc_product_adjustments} SET model = '%s' WHERE nid = %d AND combination = '%s'", $conditions);
+      if (!db_affected_rows()) {
+        // if it doesn't exist, insert
+        print('combo did not exist in db!<br>');
+        $result = db_query("INSERT INTO {uc_product_adjustments} (model, nid, combination) VALUES ('%s', %d, '%s')",
+          $conditions);
+      }
+      // $result = db_query("DELETE FROM {uc_product_adjustments} WHERE combination = '%s' AND nid = %d", $conditions);
+      print($result);
+      print(db_fetch_object($result));
 
       // add new sku into db
-      print("saving!<br>");
-      print("query: INSERT INTO {uc_product_adjustments} (nid, combo, model) VALUES (%d, %s, %s)\", $node->nid, serialize($combo), $adjustment_sku<br>");
-      // db_query("UPDATE {uc_product_adjustments} SET model = %s WHERE nid = %d", $adjustment_sku, $node->nid);
-      
+      print("done<br>");
       // Load modified node to check if operation was processed correctly.
       // $new_node = node_load($node->nid, NULL, TRUE);
       
