@@ -7,23 +7,28 @@
  */
 function uc_attribute_sku_gen_action_info() {
   return array(
-    'uc_attribute_sku_gen_update_option_skus_action' => array(
+	'uc_attribute_sku_gen_update_option_skus_action' => array(
       'type' => 'node',
-      'description' => t('Generate SKUs for all option combinations'),
+      'label' => t('Generate SKUs for all option combinations'),
       'configurable' => FALSE,
-      'hooks' => array(
-        'nodeapi' => array('update'),
-      )
-    )
+	  'aggregate' => FALSE,
+    ),
   );
 }
 
 /**
  * Execute the action.
  */
-function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
+function uc_attribute_sku_gen_update_option_skus_action($node, $params) {
   // make sure it's a product with attributes
+  print("<pre>");
+  print_r($node);
+  print_r($params);
+  print("</pre>");
+  // $node->model = "helloWorld";
+  // node_save($node);
   if (uc_product_is_product($node) && count($node->attributes) > 0) {
+    print("Product and attributes!");
     // get base sku
     $base_sku = $node->model;
 
@@ -59,14 +64,22 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
       // get sku adjustment
       $adjustment_sku .= _uc_attribute_sku_gen_gen_adjustment_sku($combo, $node->attributes);
 
+      print("<pre>");
+      print_r($combo);
+      print($adjustment_sku);
+      print("</pre>");
+
       // create conditions for updating/inserting
       $conditions = array();
       $conditions[] = $adjustment_sku;
       $conditions[] = $node->nid;
       $conditions[] = serialize($combo);
 
+      
       // try and update first
-      $result = db_query("UPDATE {uc_product_adjustments} SET model = '%s' WHERE nid = %d AND combination = '%s'", $conditions);
+      // $result = db_query("UPDATE {uc_product_adjustments} SET model = '%s' WHERE nid = %d AND combination = '%s'", $conditions);
+      
+      /*
       if (!db_affected_rows()) {
         // if it doesn't exist, insert
         $result = db_query("INSERT INTO {uc_product_adjustments} (model, nid, combination) VALUES ('%s', %d, '%s')",
@@ -80,19 +93,19 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $context) {
       if($new_sku_db->model != $adjustment_sku) {
         drupal_set_message(t('An option combination of %node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title)), 'warning');
         watchdog('Ubercart attribute sku generator', 'An option combination of %node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title), WATCHDOG_WARNING, l(t('edit'), 'node/' . $node->nid . '/edit'));
-      }
+      }*/
     }
-
   }
   else {
     drupal_set_message(t('%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title)), 'warning');
-    watchdog('Ubercart attribute sku generator', '%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title), WATCHDOG_WARNING, l(t('edit'), 'node/' . $node->nid . '/edit'));
+    // watchdog('Ubercart attribute sku generator', '%node may not have updated properly, please check and update manually if needed.', array('%node' => $node->title), WATCHDOG_WARNING, l(t('edit'), 'node/' . $node->nid . '/edit'));
   }
+  die();
 }
 
 /**
  * Implements hook_form_alter()
- */
+ */ /*
 function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'uc_product_adjustments_form') {
     // print("<pre>Begin form alter stuff\n");
@@ -121,7 +134,7 @@ function uc_attribute_sku_gen_form_alter(&$form, &$form_state, $form_id) {
       }
     }
   }
-}
+} */
 
 function _uc_attribute_sku_gen_gen_adjustment_sku($combo, $attrib_opt_array) {
   $sku_adjustment = '';
