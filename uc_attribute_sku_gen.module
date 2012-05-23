@@ -75,18 +75,19 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $params) {
       $conditions[] = $node->nid;
       $conditions[] = serialize($combo);
 
-      
-      // try and update first
-      // $result = db_query("UPDATE {uc_product_adjustments} SET model = '%s' WHERE nid = %d AND combination = '%s'", $conditions);
-      
-      /*
-      if (!db_affected_rows()) {
-        // if it doesn't exist, insert
-        $result = db_query("INSERT INTO {uc_product_adjustments} (model, nid, combination) VALUES ('%s', %d, '%s')",
-          $conditions);
-      }
-      // print($result);
+      // db_merge?! How awesome is this! Update or Insert... depending on whether or not it exists!
+      $affected = db_merge('uc_product_adjustments')
+        ->key(array(
+          'nid' => $node->nid,
+          'combination' => serialize($combo)
+        ))
+        ->fields(array(
+          'model' => $adjustment_sku
+        ))
+        ->execute();
 
+      print($affected);
+      /*
       // Load modified node to check if operation was processed correctly.
       $new_sku_db = db_fetch_object(db_query("SELECT model FROM {uc_product_adjustments} WHERE nid = %d AND combination = '%s'", $node->nid, serialize($combo)));
 
