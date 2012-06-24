@@ -26,28 +26,18 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $params) {
     $base_sku = $node->model;
 
     // generate array of [aid]=>[oid] so we can do a cartesian product
-    // initially, put default_ordering as main key so we can sort
-    // use default_ordering so order is consistent across all products
-    $aid_oid_unsorted = array();
+    $aid_oid = array();
     foreach ($node->attributes as $aid => $attribute) {
       foreach ($attribute->options as $oid => $option) {
-        $aid_oid_unsorted[$attribute->default_ordering][$aid][] = "$oid"; // force oid to be string (necessary for db actions)
+        $aid_oid[$aid][] = "$oid"; // force oid to be string (necessary for db actions)
       }
     }
 
-    // sort by default_ordering
-    ksort($aid_oid_unsorted);
-
-    // remove default_ordering keys now that it's sorted
-    $aid_oid_sorted = array();
-    foreach($aid_oid_unsorted as $aid_oid) {
-      foreach($aid_oid as $aid => $oid) {
-        $aid_oid_sorted[$aid] = $oid;
-      }
-    }
+    // sort by aid, which is what I think uc_attribute does
+    ksort($aid_oid);
 
     // generate all combinations of the enabled options
-    $combos = _uc_attribute_sku_gen_array_cartesian($aid_oid_sorted);
+    $combos = _uc_attribute_sku_gen_array_cartesian($aid_oid);
 
     // for each combo, create a unique sku
     foreach ($combos as $combo) {
@@ -56,12 +46,6 @@ function uc_attribute_sku_gen_update_option_skus_action($node, $params) {
 
       // get sku adjustment
       $adjustment_sku .= _uc_attribute_sku_gen_gen_adjustment_sku($combo, $node->attributes);
-
-      // create conditions for updating/inserting
-      $conditions = array();
-      $conditions[] = $adjustment_sku;
-      $conditions[] = $node->nid;
-      $conditions[] = serialize($combo);
 
       // db_merge?! How awesome is this! Update or Insert... depending on whether or not it exists!
       $affected = db_merge('uc_product_adjustments')
